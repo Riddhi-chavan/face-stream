@@ -3,9 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 /**
  * VideoDisplay — renders annotated video frames received from the backend.
  *
- * @param {{ lastFrame: string|null, connectionStatus: string, isCameraActive: boolean }} props
+ * @param {{ lastFrame: string|null, connectionStatus: string, isCameraActive: boolean, isViewerMode?: boolean }} props
  */
-export default function VideoDisplay({ lastFrame, connectionStatus, isCameraActive }) {
+export default function VideoDisplay({ lastFrame, connectionStatus, isCameraActive, isViewerMode = false }) {
   const [frameCount, setFrameCount] = useState(0);
   const [fps, setFps] = useState(0);
   const fpsCounterRef = useRef({ count: 0, lastTime: Date.now() });
@@ -66,7 +66,9 @@ export default function VideoDisplay({ lastFrame, connectionStatus, isCameraActi
           <div className="text-center p-6">
             <div className="text-5xl mb-4 opacity-20">🔍</div>
             <p className="text-surface-500 text-sm">
-              {connectionStatus === 'connected' && !isCameraActive
+              {isViewerMode && connectionStatus === 'connected' && !isCameraActive
+                ? 'Broadcaster is offline. Waiting for stream to start...'
+                : connectionStatus === 'connected' && !isCameraActive
                 ? 'Camera stopped. Turn it on to see frames.'
                 : connectionStatus === 'connected'
                 ? 'Waiting for frames...'

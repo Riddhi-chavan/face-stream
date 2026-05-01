@@ -27,15 +27,21 @@ def video_feed(ws):
     from the shared frame buffer populated by /ws/stream.
     """
     logger.info("📺 Client connected to /ws/feed")
-    last_frame = None
+    last_frame = object()  # Use a dummy object so first iteration sends correctly
 
     try:
         while True:
-            frame = get_latest_frame()
+            frame, frame_time = get_latest_frame()
 
-            if frame is not None and frame is not last_frame:
-                ws.send(frame)
-                last_frame = frame
+            # If the frame is explicitly None, or if we haven't received a frame in 1.5 seconds
+            if frame is None or (time.time() - frame_time > 1.5):
+                if last_frame is not None:
+                    ws.send("OFFLINE")
+                    last_frame = None
+            else:
+                if frame is not last_frame:
+                    ws.send(frame)
+                    last_frame = frame
 
             # Throttle to ~30fps max
             time.sleep(0.033)

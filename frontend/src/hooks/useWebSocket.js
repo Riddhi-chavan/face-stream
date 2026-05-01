@@ -18,6 +18,7 @@ export function useWebSocket(url, options = {}) {
 
   const [connectionStatus, setConnectionStatus] = useState('disconnected'); // 'connecting' | 'connected' | 'disconnected' | 'error'
   const [lastFrame, setLastFrame] = useState(null);
+  const [isStreamLive, setIsStreamLive] = useState(false);
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const intentionalCloseRef = useRef(false);
@@ -51,9 +52,28 @@ export function useWebSocket(url, options = {}) {
       };
 
       ws.onmessage = (event) => {
+        let isOfflineMsg = false;
+        if (typeof event.data === 'string' && event.data.trim() === 'OFFLINE') {
+          isOfflineMsg = true;
+        } else if (event.data instanceof ArrayBuffer && event.data.byteLength === 7) {
+          // Check if it's the "OFFLINE" string sent as binary
+          const text = new TextDecoder().decode(event.data);
+          if (text === 'OFFLINE') isOfflineMsg = true;
+        }
+
+        if (isOfflineMsg) {
+          setIsStreamLive(false);
+          setLastFrame((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return null;
+          });
+          return; // Exit early so we don't process it as an image
+        }
+
         // Convert received binary data to a blob URL for display
-        if (event.data instanceof ArrayBuffer) {
-          const blob = new Blob([event.data], { type: 'image/jpeg' });
+        if (event.data instanceof ArrayBuffer || event.data instanceof Blob) {
+          setIsStreamLive(true);
+          const blob = event.data instanceof Blob ? event.data : new Blob([event.data], { type: 'image/jpeg' });
           const blobUrl = URL.createObjectURL(blob);
           setLastFrame((prev) => {
             // Revoke previous blob URL to prevent memory leaks
@@ -125,5 +145,6 @@ export function useWebSocket(url, options = {}) {
     connectionStatus,
     connect,
     disconnect,
+    isStreamLive,
   };
 }

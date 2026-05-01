@@ -27,4 +27,4 @@ else
 fi
 
 echo "🚀 Starting Flask server..."
-exec python -m flask run --host=0.0.0.0 --port=5000
+exec python -m flask run --host=0.0.0.0 --port=5000 --debug

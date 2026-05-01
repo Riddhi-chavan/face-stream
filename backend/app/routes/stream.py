@@ -2,6 +2,7 @@
 import logging
 import uuid
 import threading
+import time
 from datetime import datetime, timezone
 
 from flask import Blueprint, current_app
@@ -18,19 +19,21 @@ sock = Sock()
 # Shared frame buffer for the /ws/feed endpoint to read from
 _latest_frame_lock = threading.Lock()
 _latest_annotated_frame: bytes | None = None
+_latest_frame_time: float = 0.0
 
 
-def get_latest_frame() -> bytes | None:
+def get_latest_frame() -> tuple[bytes | None, float]:
     """Thread-safe getter for the latest annotated frame."""
     with _latest_frame_lock:
-        return _latest_annotated_frame
+        return _latest_annotated_frame, _latest_frame_time
 
 
-def _set_latest_frame(frame_bytes: bytes):
+def _set_latest_frame(frame_bytes: bytes | None):
     """Thread-safe setter for the latest annotated frame."""
-    global _latest_annotated_frame
+    global _latest_annotated_frame, _latest_frame_time
     with _latest_frame_lock:
         _latest_annotated_frame = frame_bytes
+        _latest_frame_time = time.time() if frame_bytes is not None else 0.0
 
 
 @stream_bp.record_once
@@ -103,4 +106,5 @@ def video_stream(ws):
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
     finally:
+        _set_latest_frame(None)
         logger.info("🔌 Client disconnected from /ws/stream")

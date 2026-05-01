@@ -33,6 +33,7 @@ services:
       - "5000:5000"
     volumes:
       - ./backend:/app
+    entrypoint: ["/bin/bash", "/app/entrypoint.sh"]
     depends_on:
       db:
         condition: service_healthy
