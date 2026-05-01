@@ -9,6 +9,21 @@ const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${wind
 export default function App() {
   const { sendFrame, lastFrame, connectionStatus, connect, disconnect } = useWebSocket(WS_URL);
   const [showPanel, setShowPanel] = useState(true);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraErrorMsg, setCameraErrorMsg] = useState('');
+
+  const handleConnectClick = () => {
+    if (connectionStatus === 'connected') {
+      disconnect();
+    } else {
+      if (!isCameraActive) {
+        setCameraErrorMsg('Please start your camera first!');
+        setTimeout(() => setCameraErrorMsg(''), 3000);
+        return;
+      }
+      connect();
+    }
+  };
 
   const statusConfig = {
     connected: { color: 'bg-success-400', label: 'Connected', textColor: 'text-success-400' },
@@ -39,10 +54,17 @@ export default function App() {
           </div>
 
           {/* Center: Connection Controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 relative">
+            {cameraErrorMsg && (
+              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 whitespace-nowrap bg-danger-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-lg z-50">
+                {cameraErrorMsg}
+                {/* Little triangle pointer */}
+                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-danger-500 rotate-45"></div>
+              </div>
+            )}
             <button
               id="ws-connect-btn"
-              onClick={connectionStatus === 'connected' ? disconnect : connect}
+              onClick={handleConnectClick}
               className={`
                 group relative px-5 py-2 rounded-lg text-sm font-medium transition-all duration-300 overflow-hidden
                 ${connectionStatus === 'connected'
@@ -89,7 +111,7 @@ export default function App() {
           <div className="space-y-6">
             {/* Camera Input Card */}
             <section className="glass rounded-2xl p-5 card-hover">
-              <VideoCapture sendFrame={sendFrame} connectionStatus={connectionStatus} />
+              <VideoCapture sendFrame={sendFrame} connectionStatus={connectionStatus} onCameraStateChange={setIsCameraActive} />
             </section>
 
             {/* Detected Output Card */}

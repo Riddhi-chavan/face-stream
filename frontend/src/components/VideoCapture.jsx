@@ -5,9 +5,9 @@ const JPEG_QUALITY = 0.8;
 /**
  * VideoCapture — accesses webcam, captures frames, sends over WebSocket.
  *
- * @param {{ sendFrame: Function, connectionStatus: string }} props
+ * @param {{ sendFrame: Function, connectionStatus: string, onCameraStateChange: Function }} props
  */
-export default function VideoCapture({ sendFrame, connectionStatus }) {
+export default function VideoCapture({ sendFrame, connectionStatus, onCameraStateChange }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -95,6 +95,13 @@ export default function VideoCapture({ sendFrame, connectionStatus }) {
     },
     [connectionStatus, sendFrame]
   );
+
+  // Sync camera state with parent
+  useEffect(() => {
+    if (onCameraStateChange) {
+      onCameraStateChange(cameraActive);
+    }
+  }, [cameraActive, onCameraStateChange]);
 
   // Start capture loop when camera is active and connected
   useEffect(() => {
