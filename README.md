@@ -1,6 +1,6 @@
 # 🎥 FaceStream — Real-Time Face Detection Video Streaming System
 
-[![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-181717.svg?style=for-the-badge&logo=github)](https://github.com/Riddhi-chavan/realtime-face-detection)
+[![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-181717.svg?style=for-the-badge&logo=github)](https://github.com/Riddhi-chavan/face-stream)
 
 ![Architecture](architecture.png)
 
