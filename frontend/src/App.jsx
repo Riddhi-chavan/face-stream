@@ -116,7 +116,7 @@ export default function App() {
 
             {/* Detected Output Card */}
             <section className="glass rounded-2xl p-5 card-hover">
-              <VideoDisplay lastFrame={lastFrame} connectionStatus={connectionStatus} />
+              <VideoDisplay lastFrame={lastFrame} connectionStatus={connectionStatus} isCameraActive={isCameraActive} />
             </section>
           </div>
 

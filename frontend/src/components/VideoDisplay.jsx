@@ -3,9 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 /**
  * VideoDisplay — renders annotated video frames received from the backend.
  *
- * @param {{ lastFrame: string|null, connectionStatus: string }} props
+ * @param {{ lastFrame: string|null, connectionStatus: string, isCameraActive: boolean }} props
  */
-export default function VideoDisplay({ lastFrame, connectionStatus }) {
+export default function VideoDisplay({ lastFrame, connectionStatus, isCameraActive }) {
   const [frameCount, setFrameCount] = useState(0);
   const [fps, setFps] = useState(0);
   const fpsCounterRef = useRef({ count: 0, lastTime: Date.now() });
@@ -66,21 +66,29 @@ export default function VideoDisplay({ lastFrame, connectionStatus }) {
           <div className="text-center p-6">
             <div className="text-5xl mb-4 opacity-20">🔍</div>
             <p className="text-surface-500 text-sm">
-              {connectionStatus === 'connected'
+              {connectionStatus === 'connected' && !isCameraActive
+                ? 'Camera stopped. Turn it on to see frames.'
+                : connectionStatus === 'connected'
                 ? 'Waiting for frames...'
                 : 'Connect to see annotated output'}
             </p>
           </div>
         )}
 
-        {/* Overlay: Connection status */}
-        {connectionStatus !== 'connected' && lastFrame && (
+        {/* Overlay: Connection and Camera status */}
+        {connectionStatus !== 'connected' && lastFrame ? (
           <div className="absolute inset-0 bg-surface-950/70 flex items-center justify-center rounded-xl">
             <div className="glass px-4 py-2 rounded-lg">
               <span className="text-sm text-surface-300">⏸ Stream paused</span>
             </div>
           </div>
-        )}
+        ) : connectionStatus === 'connected' && !isCameraActive && lastFrame ? (
+          <div className="absolute inset-0 bg-surface-950/70 flex items-center justify-center rounded-xl">
+            <div className="glass px-4 py-2 rounded-lg">
+              <span className="text-sm text-surface-300">⏹ Camera stopped</span>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* Status bar */}
