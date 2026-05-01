@@ -125,60 +125,68 @@ export default function VideoCapture({ sendFrame, connectionStatus, onCameraStat
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-accent-500/10 border border-accent-500/20">
-            <svg className="w-5 h-5 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-neutral-800 border border-neutral-700">
+            <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-surface-100">Camera Input</h2>
-            <p className="text-xs text-surface-400">Live webcam feed at {targetFps}fps</p>
+            <h2 className="text-sm font-semibold text-neutral-100">Camera Input</h2>
+            <p className="text-[11px] text-neutral-500">{targetFps} fps · webcam</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <select
             value={targetFps}
             onChange={handleFpsChange}
-            className="bg-surface-800 text-surface-100 text-sm font-medium rounded-lg px-3 py-2 border border-surface-700 outline-none focus:border-accent-500/50 transition-colors cursor-pointer"
+            className="bg-neutral-800 text-neutral-200 text-xs font-medium rounded-lg px-2.5 py-1.5 border border-neutral-700 outline-none focus:border-neutral-600 transition-colors cursor-pointer appearance-none"
           >
-            <option value={30}>30 FPS</option>
-            <option value={60}>60 FPS</option>
-            <option value={120}>120 FPS</option>
+            <option value={30}>30 fps</option>
+            <option value={60}>60 fps</option>
+            <option value={120}>120 fps</option>
           </select>
 
           <button
             id="camera-toggle-btn"
             onClick={cameraActive ? stopCamera : startCamera}
             className={`
-              px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
+              px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
               ${cameraActive
-                ? 'bg-danger-500/20 text-danger-400 hover:bg-danger-500/30 border border-danger-500/30'
-                : 'bg-accent-500/20 text-accent-400 hover:bg-accent-500/30 border border-accent-500/30'
+                ? 'bg-neutral-800 text-danger-400 hover:bg-neutral-700 border border-neutral-700'
+                : 'bg-accent-500 text-neutral-950 hover:bg-accent-400 font-semibold'
               }
             `}
           >
-            {cameraActive ? '⏹ Stop' : '▶ Start Camera'}
+            {cameraActive ? 'Stop' : 'Start Camera'}
           </button>
         </div>
       </div>
 
       {/* Video Preview */}
-      <div className="video-container bg-surface-950 aspect-video rounded-xl flex items-center justify-center">
+      <div className="video-container aspect-video flex items-center justify-center">
         {cameraError ? (
           <div className="text-center p-6">
-            <div className="text-4xl mb-3">📷</div>
+            <div className="w-10 h-10 rounded-full bg-danger-500/10 flex items-center justify-center mx-auto mb-3">
+              <svg className="w-5 h-5 text-danger-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+            </div>
             <p className="text-danger-400 text-sm">{cameraError}</p>
           </div>
         ) : !cameraActive ? (
           <div className="text-center p-6">
-            <div className="text-5xl mb-4 opacity-30">🎥</div>
-            <p className="text-surface-500 text-sm">Click "Start Camera" to begin</p>
+            <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center mx-auto mb-3">
+              <svg className="w-5 h-5 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <p className="text-neutral-500 text-sm">Click "Start Camera" to begin</p>
           </div>
         ) : null}
         <video
           ref={videoRef}
-          className={`w-full h-full object-cover rounded-xl ${!cameraActive ? 'hidden' : ''}`}
+          className={`w-full h-full object-cover rounded-[7px] ${!cameraActive ? 'hidden' : ''}`}
           autoPlay
           playsInline
           muted
@@ -189,13 +197,13 @@ export default function VideoCapture({ sendFrame, connectionStatus, onCameraStat
       <canvas ref={canvasRef} className="hidden" />
 
       {/* Status bar */}
-      <div className="flex items-center gap-4 text-xs text-surface-400">
+      <div className="flex items-center gap-3 text-[11px] text-neutral-500">
         <span className="flex items-center gap-1.5">
-          <span className={`w-2 h-2 rounded-full ${cameraActive ? 'bg-success-400 status-dot' : 'bg-surface-600'}`} />
-          Camera: {cameraActive ? 'Active' : 'Inactive'}
+          <span className={`w-1.5 h-1.5 rounded-full ${cameraActive ? 'bg-success-400 status-dot' : 'bg-neutral-700'}`} />
+          {cameraActive ? 'Active' : 'Inactive'}
         </span>
-        <span className="text-surface-700">|</span>
-        <span>Resolution: {videoRef.current?.videoWidth || '—'}×{videoRef.current?.videoHeight || '—'}</span>
+        <span className="text-neutral-800">|</span>
+        <span>{videoRef.current?.videoWidth || '—'}×{videoRef.current?.videoHeight || '—'}</span>
       </div>
     </div>
   );

@@ -50,15 +50,15 @@ export default function ROIPanel() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20">
-            <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-neutral-800 border border-neutral-700">
+            <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" />
             </svg>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-surface-100">ROI Events</h2>
-            <p className="text-xs text-surface-400">
-              {total.toLocaleString()} total detections · Polling every {POLL_INTERVAL / 1000}s
+            <h2 className="text-sm font-semibold text-neutral-100">ROI Events</h2>
+            <p className="text-[11px] text-neutral-500">
+              {total.toLocaleString()} detections · {POLL_INTERVAL / 1000}s poll
             </p>
           </div>
         </div>
@@ -66,10 +66,10 @@ export default function ROIPanel() {
         <button
           id="refresh-roi-btn"
           onClick={fetchROI}
-          className="p-2 rounded-lg text-surface-400 hover:text-accent-400 hover:bg-accent-500/10 transition-all duration-200"
+          className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 transition-colors"
           title="Refresh"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         </button>
@@ -77,8 +77,8 @@ export default function ROIPanel() {
 
       {/* Error state */}
       {error && (
-        <div className="px-4 py-3 rounded-lg bg-danger-500/10 border border-danger-500/20 text-danger-400 text-sm">
-          ⚠ Failed to load ROI data: {error}
+        <div className="px-3 py-2.5 rounded-lg bg-danger-500/8 border border-danger-500/15 text-danger-400 text-xs">
+          Failed to load ROI data: {error}
         </div>
       )}
 
@@ -86,14 +86,14 @@ export default function ROIPanel() {
       {loading && !roiData.length && (
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-12 rounded-lg shimmer" />
+            <div key={i} className="h-10 rounded-lg shimmer" />
           ))}
         </div>
       )}
 
       {/* Data table */}
       {!loading && roiData.length > 0 && (
-        <div className="rounded-xl overflow-hidden border border-surface-700/30">
+        <div className="rounded-lg overflow-hidden border border-neutral-800">
           <div className="overflow-x-auto">
             <table className="w-full roi-table">
               <thead>
@@ -103,8 +103,8 @@ export default function ROIPanel() {
                   <th>Y</th>
                   <th>W</th>
                   <th>H</th>
-                  <th>Confidence</th>
-                  <th>Detected</th>
+                  <th>Conf</th>
+                  <th>Face</th>
                 </tr>
               </thead>
               <tbody>
@@ -113,18 +113,18 @@ export default function ROIPanel() {
                     key={event.id || event.frame_id}
                     className={!event.face_detected ? 'bg-danger-500/5' : ''}
                   >
-                    <td className="text-surface-300">{formatTime(event.timestamp)}</td>
-                    <td className="text-surface-300">{event.x}</td>
-                    <td className="text-surface-300">{event.y}</td>
-                    <td className="text-surface-300">{event.width}</td>
-                    <td className="text-surface-300">{event.height}</td>
+                    <td className="text-neutral-400">{formatTime(event.timestamp)}</td>
+                    <td className="text-neutral-400">{event.x}</td>
+                    <td className="text-neutral-400">{event.y}</td>
+                    <td className="text-neutral-400">{event.width}</td>
+                    <td className="text-neutral-400">{event.height}</td>
                     <td>
                       <span
-                        className={`inline-flex px-2 py-0.5 rounded text-xs font-semibold ${event.confidence >= 0.8
-                          ? 'bg-success-500/20 text-success-400'
+                        className={`inline-flex px-1.5 py-0.5 rounded text-[11px] font-medium ${event.confidence >= 0.8
+                          ? 'bg-success-500/15 text-success-400'
                           : event.confidence >= 0.5
-                            ? 'bg-yellow-500/20 text-yellow-400'
-                            : 'bg-surface-700/40 text-surface-400'
+                            ? 'bg-warn-500/15 text-warn-400'
+                            : 'bg-neutral-800 text-neutral-500'
                           }`}
                       >
                         {(event.confidence * 100).toFixed(1)}%
@@ -132,13 +132,13 @@ export default function ROIPanel() {
                     </td>
                     <td>
                       {event.face_detected ? (
-                        <span className="inline-flex items-center gap-1 text-success-400 text-xs">
-                          <span className="w-1.5 h-1.5 rounded-full bg-success-400" />
+                        <span className="inline-flex items-center gap-1 text-success-400 text-[11px]">
+                          <span className="w-1 h-1 rounded-full bg-success-400" />
                           Yes
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-surface-500 text-xs">
-                          <span className="w-1.5 h-1.5 rounded-full bg-surface-600" />
+                        <span className="inline-flex items-center gap-1 text-neutral-600 text-[11px]">
+                          <span className="w-1 h-1 rounded-full bg-neutral-700" />
                           No
                         </span>
                       )}
@@ -153,10 +153,14 @@ export default function ROIPanel() {
 
       {/* Empty state */}
       {!loading && roiData.length === 0 && !error && (
-        <div className="text-center py-12">
-          <div className="text-4xl mb-3 opacity-20">📊</div>
-          <p className="text-surface-500 text-sm">No ROI events recorded yet</p>
-          <p className="text-surface-600 text-xs mt-1">Start streaming to populate detection data</p>
+        <div className="text-center py-10">
+          <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center mx-auto mb-3">
+            <svg className="w-5 h-5 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" />
+            </svg>
+          </div>
+          <p className="text-neutral-500 text-sm">No events yet</p>
+          <p className="text-neutral-600 text-xs mt-1">Start streaming to populate data</p>
         </div>
       )}
     </div>
