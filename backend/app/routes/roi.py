@@ -1,5 +1,7 @@
 """REST endpoint: serve ROI data from PostgreSQL."""
-from flask import Blueprint, request, jsonify
+import csv
+import io
+from flask import Blueprint, request, jsonify, Response
 
 from app.extensions import db
 from app.models.roi import ROIEvent
@@ -48,3 +50,35 @@ def get_roi_events():
         "offset": offset,
         "results": [event.to_dict() for event in events],
     })
+
+@roi_bp.route("/api/roi/export", methods=["GET"])
+def export_roi_csv():
+    """Export all ROI events as a CSV file."""
+    events = db.session.query(ROIEvent).order_by(ROIEvent.timestamp.desc()).all()
+    
+    # Create an in-memory string buffer
+    si = io.StringIO()
+    cw = csv.writer(si)
+    
+    # Write headers
+    cw.writerow(["ID", "Timestamp", "X", "Y", "Width", "Height", "Confidence", "Face Detected"])
+    
+    # Write data
+    for event in events:
+        cw.writerow([
+            event.id,
+            event.timestamp.isoformat() if event.timestamp else "",
+            event.x,
+            event.y,
+            event.width,
+            event.height,
+            event.confidence,
+            event.face_detected
+        ])
+    
+    # Create the response
+    output = si.getvalue()
+    response = Response(output, mimetype="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=roi_detections_export.csv"
+    
+    return response
