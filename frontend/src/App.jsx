@@ -22,6 +22,7 @@ function FaceStreamApp({ isViewerMode }) {
   const [cameraErrorMsg, setCameraErrorMsg] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [mirrored, setMirrored] = useState(true);
 
   const handleConnectClick = () => {
     if (connectionStatus === 'connected') {
@@ -153,13 +154,13 @@ function FaceStreamApp({ isViewerMode }) {
             {/* Camera Input Card */}
             {!isViewerMode && (
               <section className="card-surface p-5">
-                <VideoCapture sendFrame={sendFrame} connectionStatus={connectionStatus} onCameraStateChange={setIsCameraActive} />
+                <VideoCapture sendFrame={sendFrame} connectionStatus={connectionStatus} onCameraStateChange={setIsCameraActive} mirrored={mirrored} onMirrorToggle={() => setMirrored(m => !m)} />
               </section>
             )}
 
             {/* Detected Output Card */}
             <section className="card-surface p-5">
-              <VideoDisplay lastFrame={lastFrame} connectionStatus={connectionStatus} isCameraActive={isViewerMode ? isStreamLive : isCameraActive} isViewerMode={isViewerMode} />
+              <VideoDisplay lastFrame={lastFrame} connectionStatus={connectionStatus} isCameraActive={isViewerMode ? isStreamLive : isCameraActive} isViewerMode={isViewerMode} mirrored={!isViewerMode && mirrored} />
             </section>
           </div>
 

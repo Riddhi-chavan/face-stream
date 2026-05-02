@@ -7,7 +7,7 @@ const JPEG_QUALITY = 0.8;
  *
  * @param {{ sendFrame: Function, connectionStatus: string, onCameraStateChange: Function }} props
  */
-export default function VideoCapture({ sendFrame, connectionStatus, onCameraStateChange }) {
+export default function VideoCapture({ sendFrame, connectionStatus, onCameraStateChange, mirrored, onMirrorToggle }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -148,6 +148,16 @@ export default function VideoCapture({ sendFrame, connectionStatus, onCameraStat
           </select>
 
           <button
+            onClick={onMirrorToggle}
+            className={`p-1.5 rounded-lg transition-colors ${mirrored ? 'bg-neutral-700 text-neutral-200' : 'text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800'}`}
+            title={mirrored ? 'Mirrored' : 'Not mirrored'}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+            </svg>
+          </button>
+
+          <button
             id="camera-toggle-btn"
             onClick={cameraActive ? stopCamera : startCamera}
             className={`
@@ -186,7 +196,7 @@ export default function VideoCapture({ sendFrame, connectionStatus, onCameraStat
         ) : null}
         <video
           ref={videoRef}
-          className={`w-full h-full object-cover rounded-[7px] ${!cameraActive ? 'hidden' : ''}`}
+          className={`w-full h-full object-cover rounded-[7px] ${!cameraActive ? 'hidden' : ''} ${mirrored ? '-scale-x-100' : ''}`}
           autoPlay
           playsInline
           muted

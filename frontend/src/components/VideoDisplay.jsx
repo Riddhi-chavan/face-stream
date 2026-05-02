@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
  *
  * @param {{ lastFrame: string|null, connectionStatus: string, isCameraActive: boolean, isViewerMode?: boolean }} props
  */
-export default function VideoDisplay({ lastFrame, connectionStatus, isCameraActive, isViewerMode = false }) {
+export default function VideoDisplay({ lastFrame, connectionStatus, isCameraActive, isViewerMode = false, mirrored = false }) {
   const [frameCount, setFrameCount] = useState(0);
   const [fps, setFps] = useState(0);
   const fpsCounterRef = useRef({ count: 0, lastTime: Date.now() });
@@ -73,7 +73,7 @@ export default function VideoDisplay({ lastFrame, connectionStatus, isCameraActi
             id="annotated-frame"
             src={lastFrame}
             alt="Annotated video frame with face detection"
-            className="w-full h-full object-cover rounded-[7px]"
+            className={`w-full h-full object-cover rounded-[7px] ${mirrored ? '-scale-x-100' : ''}`}
           />
         ) : (
           <div className="text-center p-6">
