@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
+import CaptureTimerWorker from '../workers/captureTimer.js?worker';
 
 const JPEG_QUALITY = 0.8;
 
@@ -11,17 +12,21 @@ export default function VideoCapture({ sendFrame, connectionStatus, onCameraStat
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
-  const animationRef = useRef(null);
-  const lastCaptureRef = useRef(0);
+  const workerRef = useRef(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [targetFps, setTargetFps] = useState(30);
   const targetFpsRef = useRef(30);
+  const mirroredRef = useRef(mirrored);
 
   const handleFpsChange = (e) => {
     const fps = Number(e.target.value);
     setTargetFps(fps);
     targetFpsRef.current = fps;
+    // Update the worker interval on the fly if it's running
+    if (workerRef.current) {
+      workerRef.current.postMessage({ type: 'setFps', fps });
+    }
   };
 
   const startCamera = useCallback(async () => {
@@ -57,44 +62,44 @@ export default function VideoCapture({ sendFrame, connectionStatus, onCameraStat
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-      animationRef.current = null;
+    if (workerRef.current) {
+      workerRef.current.postMessage({ type: 'stop' });
     }
     setCameraActive(false);
   }, []);
 
-  // Frame capture loop
-  const captureLoop = useCallback(
-    (timestamp) => {
-      const interval = 1000 / targetFpsRef.current;
+  // Keep mirroredRef in sync with the prop
+  useEffect(() => {
+    mirroredRef.current = mirrored;
+  }, [mirrored]);
 
-      if (timestamp - lastCaptureRef.current >= interval) {
-        lastCaptureRef.current = timestamp;
+  // Capture a single frame (called by the worker on each tick)
+  const captureFrame = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
 
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
+    if (video && canvas && video.readyState >= 2 && connectionStatus === 'connected') {
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
 
-        if (video && canvas && video.readyState >= 2 && connectionStatus === 'connected') {
-          const ctx = canvas.getContext('2d');
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0);
-
-          canvas.toBlob(
-            (blob) => {
-              if (blob) sendFrame(blob);
-            },
-            'image/jpeg',
-            JPEG_QUALITY
-          );
-        }
+      // Apply mirror at the pixel level so viewers receive mirrored frames
+      if (mirroredRef.current) {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
       }
 
-      animationRef.current = requestAnimationFrame(captureLoop);
-    },
-    [connectionStatus, sendFrame]
-  );
+      ctx.drawImage(video, 0, 0);
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob) sendFrame(blob);
+        },
+        'image/jpeg',
+        JPEG_QUALITY
+      );
+    }
+  }, [connectionStatus, sendFrame]);
 
   // Sync camera state with parent
   useEffect(() => {
@@ -103,21 +108,36 @@ export default function VideoCapture({ sendFrame, connectionStatus, onCameraStat
     }
   }, [cameraActive, onCameraStateChange]);
 
-  // Start capture loop when camera is active and connected
+  // Start / stop the Web Worker timer when camera & connection state change
   useEffect(() => {
     if (cameraActive && connectionStatus === 'connected') {
-      animationRef.current = requestAnimationFrame(captureLoop);
+      // Create a fresh worker if we don't have one
+      if (!workerRef.current) {
+        workerRef.current = new CaptureTimerWorker();
+      }
+      // Wire up the tick handler
+      workerRef.current.onmessage = () => captureFrame();
+      workerRef.current.postMessage({ type: 'start', fps: targetFpsRef.current });
+    } else if (workerRef.current) {
+      workerRef.current.postMessage({ type: 'stop' });
     }
+
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
+      if (workerRef.current) {
+        workerRef.current.postMessage({ type: 'stop' });
       }
     };
-  }, [cameraActive, connectionStatus, captureLoop]);
+  }, [cameraActive, connectionStatus, captureFrame]);
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => stopCamera();
+    return () => {
+      stopCamera();
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+    };
   }, [stopCamera]);
 
   return (

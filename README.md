@@ -8,6 +8,22 @@ A fully containerised, full-stack application that captures webcam video in the 
 
 ---
 
+## ✨ Features
+
+- **Real-time face detection** — MediaPipe processes webcam frames and returns annotated video with bounding boxes and confidence scores
+- **Live viewer mode** (`/viewer`) — Share your stream with anyone; viewers connect via a read-only WebSocket and see annotated frames in real-time
+- **Mirror toggle** — Flip the camera horizontally; the mirror is applied at the pixel level so viewers see the same orientation as the broadcaster
+- **Configurable FPS** — Switch between 30, 60, and 120 fps capture rates on the fly
+- **Background-tab safe** — Frame capture uses a Web Worker timer instead of `requestAnimationFrame`, so streaming continues at full FPS even when the browser tab is in the background
+- **Live confidence chart** — A real-time line chart (Recharts) visualises detection confidence percentage over time
+- **ROI event table** — A panel displaying the 10 most recent detections with coordinates, dimensions, confidence, and detection status, auto-polling every 2 seconds
+- **CSV export** — Download all ROI detection history as a CSV file with one click
+- **Screenshot capture** — Save the current annotated frame as a PNG directly from the browser
+- **Share modal** — Copy the viewer link (`/viewer`) to your clipboard and share with others
+- **Dark mode UI** — A polished, dark-themed interface built with Tailwind CSS
+
+---
+
 ## 📋 Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) (v20+)
@@ -21,8 +37,8 @@ That's it. No Python, Node, or PostgreSQL installation needed on your host machi
 
 ```bash
 # 1. Clone the repository
-git clone <repo-url>
-cd <project-root>
+git clone https://github.com/Riddhi-chavan/face-stream.git
+cd face-stream
 
 # 2. Create environment file
 cp .env.example .env
@@ -32,29 +48,46 @@ docker compose up --build
 ```
 
 Once running:
+
 - **Frontend**: [http://localhost:5173](http://localhost:5173)
 - **Backend API**: [http://localhost:5000](http://localhost:5000)
 - **pgAdmin**: [http://localhost:5050](http://localhost:5050)
 
-### Usage
+### Usage — Broadcaster (`/`)
+
 1. Open the frontend at `localhost:5173`
-2. Click **"Connect Stream"** in the header to establish the WebSocket connection
-3. Click **"Start Camera"** to activate your webcam
+2. Click **"Start Camera"** to activate your webcam
+3. Click **"Go Live"** in the header to establish the WebSocket connection
 4. Watch the annotated output appear with real-time face bounding boxes
-5. The ROI Events panel (right side) shows detection history from the database
+5. Use the **FPS dropdown** to switch between 30, 60, and 120 fps
+6. Toggle the **mirror button** (↔) to flip the camera horizontally
+7. The **ROI Events** panel (right side) shows detection history from the database
+8. The **Live Confidence** chart shows detection accuracy over time
+9. Click **"Share"** in the header to copy the viewer link
+
+### Usage — Viewer (`/viewer`)
+
+1. Open `localhost:5173/viewer` in a separate tab or device
+2. The viewer auto-connects and displays the annotated stream in real-time
+3. When the broadcaster is offline, the viewer shows "Broadcaster is offline. Waiting for stream…"
+4. Click the 📷 button to save a screenshot of the current frame
+
+> **⚡ Performance Note:** Running both the broadcaster and viewer on the same machine (especially in Docker on a laptop) means the backend is processing frames, running face detection, and serving them — all locally. You may notice some lag on lower-end hardware. Deploying to a dedicated server with better CPU/GPU resources will significantly improve performance and frame rates.
 
 ---
 
 ## 📡 Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `WS` | `/ws/stream` | Bidirectional WebSocket — send JPEG frames, receive annotated JPEG frames |
-| `WS` | `/ws/feed` | Read-only WebSocket — broadcasts latest annotated frame |
-| `GET` | `/api/roi` | REST — paginated ROI event data (`?limit=50&offset=0`) |
-| `GET` | `/health` | Health check — returns `{"status": "ok"}` |
+| Method | Path              | Description                                                               |
+| ------ | ----------------- | ------------------------------------------------------------------------- |
+| `WS`   | `/ws/stream`      | Bidirectional WebSocket — send JPEG frames, receive annotated JPEG frames |
+| `WS`   | `/ws/feed`        | Read-only WebSocket — broadcasts latest annotated frame to viewers        |
+| `GET`  | `/api/roi`        | REST — paginated ROI event data (`?limit=50&offset=0`)                    |
+| `GET`  | `/api/roi/export` | REST — export all ROI events as CSV download                              |
+| `GET`  | `/health`         | Health check — returns `{"status": "ok"}`                                 |
 
 ### `/api/roi` Response Format
+
 ```json
 {
   "total": 312,
@@ -65,7 +98,10 @@ Once running:
       "id": 1,
       "frame_id": "uuid-...",
       "timestamp": "2025-01-01T12:00:00+00:00",
-      "x": 120, "y": 80, "width": 200, "height": 210,
+      "x": 120,
+      "y": 80,
+      "width": 200,
+      "height": 210,
       "confidence": 0.97,
       "face_detected": true
     }
@@ -77,7 +113,36 @@ Once running:
 
 ## 🏗️ How It Works
 
-The browser captures webcam frames at configurable framerates (30/60/120fps) using a `<canvas>` element, encodes them as JPEG, and sends the raw bytes over a WebSocket to the Flask backend. The backend decodes each frame with Pillow, passes the RGB numpy array to MediaPipe's FaceDetection model, draws a red bounding box on detected faces using Pillow's `ImageDraw`, saves the ROI coordinates and confidence score to PostgreSQL via SQLAlchemy, and sends the annotated JPEG bytes back over the same WebSocket. The React frontend renders these annotated frames in real-time while a separate panel polls the REST API for recent detection events.
+### Frame Pipeline
+
+```
+Browser (VideoCapture)
+  │  Webcam → <canvas> → JPEG blob
+  │  Mirror transform applied at pixel level (if enabled)
+  │  Web Worker timer drives capture (not throttled in background tabs)
+  │
+  ▼
+WebSocket (/ws/stream)
+  │
+  ▼
+Flask Backend
+  │  1. Decode JPEG → PIL Image → NumPy array
+  │  2. MediaPipe FaceDetection → bounding box + confidence
+  │  3. Pillow ImageDraw → red bounding box + label
+  │  4. Save ROI to PostgreSQL (async thread)
+  │  5. Send annotated JPEG back to broadcaster
+  │  6. Store in shared frame buffer for viewers
+  │
+  ├──→ WebSocket (/ws/stream) → Broadcaster's VideoDisplay
+  └──→ WebSocket (/ws/feed)   → Viewer's VideoDisplay
+```
+
+### Key Design Decisions
+
+- **Web Worker for timing**: `requestAnimationFrame` and `setInterval` are throttled by browsers in background tabs. A dedicated Web Worker runs `setInterval` on a separate thread, ensuring frames continue to be captured at the target FPS even when the tab is not focused.
+- **Pixel-level mirror**: The mirror transform is applied on the canvas before encoding to JPEG, so the backend processes and the viewer receives frames in the correct orientation — no client-side CSS coordination needed.
+- **Shared frame buffer**: The `/ws/stream` handler stores each annotated frame in a thread-safe shared buffer. The `/ws/feed` endpoint reads from this buffer and broadcasts to all connected viewers, decoupling the processing pipeline from viewer distribution.
+- **Async DB writes**: ROI data is saved to PostgreSQL in a background thread to avoid blocking the WebSocket frame loop.
 
 ---
 
@@ -98,7 +163,7 @@ docker compose exec backend pytest tests/test_roi_api.py -v
 ## 📂 Project Structure
 
 ```
-project-root/
+face-stream/
 ├── docker-compose.yml          # 4 services: db, backend, frontend, pgadmin
 ├── .env.example                # Environment variable template
 ├── architecture.png            # Architecture diagram
@@ -108,6 +173,7 @@ project-root/
 │   ├── Dockerfile
 │   ├── entrypoint.sh           # Waits for DB, runs migrations, starts Flask
 │   ├── requirements.txt
+│   ├── alembic.ini
 │   ├── app/
 │   │   ├── __init__.py         # Flask app factory
 │   │   ├── config.py           # Environment-based configuration
@@ -116,13 +182,13 @@ project-root/
 │   │   │   └── roi.py          # ROIEvent SQLAlchemy model
 │   │   ├── routes/
 │   │   │   ├── stream.py       # WS /ws/stream — bidirectional frame processing
-│   │   │   ├── feed.py         # WS /ws/feed — annotated frame broadcast
-│   │   │   └── roi.py          # REST /api/roi — paginated ROI data
+│   │   │   ├── feed.py         # WS /ws/feed — annotated frame broadcast to viewers
+│   │   │   └── roi.py          # REST /api/roi — paginated data + CSV export
 │   │   ├── services/
-│   │   │   ├── detection.py    # MediaPipe face detection
-│   │   │   ├── drawing.py      # Pillow bounding box drawing
-│   │   │   └── storage.py      # PostgreSQL ROI persistence
-│   │   └── migrations/         # Alembic migrations
+│   │   │   ├── detection.py    # MediaPipe face detection (model_selection=0)
+│   │   │   ├── drawing.py      # Pillow bounding box + confidence label drawing
+│   │   │   └── storage.py      # PostgreSQL ROI persistence (async threaded)
+│   │   └── migrations/         # Alembic migration scripts
 │   └── tests/
 │       ├── conftest.py         # Pytest fixtures
 │       ├── test_health.py      # Server + route smoke tests
@@ -132,19 +198,22 @@ project-root/
 └── frontend/
     ├── Dockerfile
     ├── package.json
-    ├── vite.config.js          # Vite config with backend proxy
+    ├── vite.config.js          # Vite config with WS/API proxy to backend
     ├── tailwind.config.js
     ├── index.html
     └── src/
-        ├── main.jsx
-        ├── App.jsx             # Main layout + WebSocket controls
-        ├── index.css           # Global styles + Tailwind
+        ├── main.jsx            # React entry point with BrowserRouter
+        ├── App.jsx             # Routing (/ and /viewer), layout, WebSocket controls
+        ├── index.css           # Global styles + Tailwind + dark theme
         ├── components/
-        │   ├── VideoCapture.jsx  # Webcam capture + frame sending
-        │   ├── VideoDisplay.jsx  # Annotated frame rendering
-        │   └── ROIPanel.jsx      # ROI event data table
-        └── hooks/
-            └── useWebSocket.js   # Reusable WebSocket lifecycle hook
+        │   ├── VideoCapture.jsx    # Webcam capture, mirror, FPS control, Web Worker timer
+        │   ├── VideoDisplay.jsx    # Annotated frame rendering, FPS counter, screenshot
+        │   ├── ROIPanel.jsx        # ROI event table, CSV export button, auto-refresh
+        │   └── ConfidenceChart.jsx # Live confidence line chart (Recharts)
+        ├── hooks/
+        │   └── useWebSocket.js     # Reusable WebSocket lifecycle hook (connect/disconnect/reconnect)
+        └── workers/
+            └── captureTimer.js     # Web Worker — un-throttled setInterval for background tabs
 ```
 
 ---
@@ -162,21 +231,25 @@ project-root/
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | React 18 + Vite 6 + Tailwind CSS 3 |
-| Backend | Flask 3 + Flask-Sock (WebSockets) |
-| Face Detection | MediaPipe (`mediapipe` Python package) |
-| Bounding Box | Pillow (`PIL.ImageDraw`) |
-| Database | PostgreSQL 15 + SQLAlchemy 2 + Flask-Migrate (Alembic) |
-| Containerisation | Docker + Docker Compose |
-| Testing | pytest + pytest-flask |
+| Layer            | Technology                                             |
+| ---------------- | ------------------------------------------------------ |
+| Frontend         | React 18 + Vite 6 + Tailwind CSS 3                     |
+| Routing          | React Router DOM 7                                     |
+| Charts           | Recharts 3                                             |
+| Backend          | Flask 3 + Flask-Sock (WebSockets) + Flask-CORS         |
+| Face Detection   | MediaPipe 0.10 (`FaceDetection`, `model_selection=0`)  |
+| Bounding Box     | Pillow (`ImageDraw` + `ImageFont`)                     |
+| Database         | PostgreSQL 15 + SQLAlchemy 2 + Flask-Migrate (Alembic) |
+| Containerisation | Docker + Docker Compose                                |
+| DB Admin         | pgAdmin 4                                              |
+| Testing          | pytest + pytest-flask                                  |
 
 ---
 
 ## 🤖 AI Usage Disclosure
 
 This project was scaffolded with the assistance of **Antigravity**. Specifically, AI was used for:
+
 - Generating the initial project structure and boilerplate code
 - Writing the Flask app factory, route handlers, and service modules
 - Creating the React components and WebSocket hook

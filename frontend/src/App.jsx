@@ -76,10 +76,10 @@ function FaceStreamApp({ isViewerMode }) {
   };
 
   const statusMap = {
-    connected:    { dot: 'bg-success-400', label: 'Connected',    text: 'text-success-400' },
-    connecting:   { dot: 'bg-warn-400',    label: 'Connecting…',  text: 'text-warn-400' },
+    connected: { dot: 'bg-success-400', label: 'Connected', text: 'text-success-400' },
+    connecting: { dot: 'bg-warn-400', label: 'Connecting…', text: 'text-warn-400' },
     disconnected: { dot: 'bg-neutral-600', label: 'Disconnected', text: 'text-neutral-500' },
-    error:        { dot: 'bg-danger-400',  label: 'Error',        text: 'text-danger-400' },
+    error: { dot: 'bg-danger-400', label: 'Error', text: 'text-danger-400' },
   };
 
   const status = statusMap[connectionStatus] || statusMap.disconnected;
@@ -192,9 +192,9 @@ function FaceStreamApp({ isViewerMode }) {
 
             {/* Detected Output Card */}
             <section className="card-surface p-5">
-              <VideoDisplay lastFrame={lastFrame} connectionStatus={connectionStatus} isCameraActive={isViewerMode ? isStreamLive : isCameraActive} isViewerMode={isViewerMode} mirrored={!isViewerMode && mirrored} />
+              <VideoDisplay lastFrame={lastFrame} connectionStatus={connectionStatus} isCameraActive={isViewerMode ? isStreamLive : isCameraActive} isViewerMode={isViewerMode} />
             </section>
-            
+
             {/* Live Confidence Chart */}
             {showPanel && <ConfidenceChart data={roiData} />}
           </div>
