@@ -9,6 +9,34 @@ export default function VideoDisplay({ lastFrame, connectionStatus, isCameraActi
   const [frameCount, setFrameCount] = useState(0);
   const [fps, setFps] = useState(0);
   const fpsCounterRef = useRef({ count: 0, lastTime: Date.now() });
+  const imgRef = useRef(null);
+
+  const handleScreenshot = () => {
+    if (!imgRef.current) return;
+    
+    const img = imgRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    
+    if (mirrored) {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+    
+    ctx.drawImage(img, 0, 0);
+    
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `facestream-screenshot-${Date.now()}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  };
 
   // Count frames for FPS display
   useEffect(() => {
@@ -57,6 +85,18 @@ export default function VideoDisplay({ lastFrame, connectionStatus, isCameraActi
 
         {/* Live stats */}
         <div className="flex items-center gap-1.5">
+          {lastFrame && (
+            <button
+              onClick={handleScreenshot}
+              className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 transition-colors mr-1"
+              title="Save Screenshot"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+              </svg>
+            </button>
+          )}
           <span className="px-2 py-1 rounded-md text-[11px] font-mono bg-neutral-800 border border-neutral-700/60 text-neutral-400">
             {fps} fps
           </span>
@@ -70,6 +110,7 @@ export default function VideoDisplay({ lastFrame, connectionStatus, isCameraActi
       <div className="video-container aspect-video flex items-center justify-center overflow-hidden">
         {lastFrame ? (
           <img
+            ref={imgRef}
             id="annotated-frame"
             src={lastFrame}
             alt="Annotated video frame with face detection"
