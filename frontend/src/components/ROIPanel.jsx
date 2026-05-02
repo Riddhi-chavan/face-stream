@@ -1,38 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-
-const POLL_INTERVAL = 2000; // 2 seconds
-const DEFAULT_LIMIT = 10;
-
 /**
- * ROIPanel — polls /api/roi and displays recent ROI data.
+ * ROIPanel — displays recent ROI data passed down from parent.
  */
-export default function ROIPanel() {
-  const [roiData, setRoiData] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchROI = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/roi?limit=${DEFAULT_LIMIT}&offset=0`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setRoiData(data.results || []);
-      setTotal(data.total || 0);
-      setError(null);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Poll on interval
-  useEffect(() => {
-    fetchROI();
-    const interval = setInterval(fetchROI, POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchROI]);
+export default function ROIPanel({ roiData, total, loading, error, fetchROI, pollInterval = 2000 }) {
+  // Only display the 10 most recent detections in the table
+  const displayData = roiData.slice(0, 10);
 
   const formatTime = (isoString) => {
     if (!isoString) return '—';
@@ -58,7 +29,7 @@ export default function ROIPanel() {
           <div>
             <h2 className="text-sm font-semibold text-neutral-100">ROI Events</h2>
             <p className="text-[11px] text-neutral-500">
-              {total.toLocaleString()} detections · {POLL_INTERVAL / 1000}s poll
+              {total.toLocaleString()} detections · {pollInterval / 1000}s poll
             </p>
           </div>
         </div>
@@ -121,7 +92,7 @@ export default function ROIPanel() {
                 </tr>
               </thead>
               <tbody>
-                {roiData.map((event) => (
+                {displayData.map((event) => (
                   <tr
                     key={event.id || event.frame_id}
                     className={!event.face_detected ? 'bg-danger-500/5' : ''}
@@ -165,7 +136,7 @@ export default function ROIPanel() {
       )}
 
       {/* Empty state */}
-      {!loading && roiData.length === 0 && !error && (
+      {!loading && displayData.length === 0 && !error && (
         <div className="text-center py-10">
           <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center mx-auto mb-3">
             <svg className="w-5 h-5 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

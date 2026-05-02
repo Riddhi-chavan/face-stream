@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useWebSocket } from './hooks/useWebSocket';
 import VideoCapture from './components/VideoCapture';
 import VideoDisplay from './components/VideoDisplay';
 import ROIPanel from './components/ROIPanel';
+import ConfidenceChart from './components/ConfidenceChart';
 
 export default function App() {
   return (
@@ -23,6 +24,37 @@ function FaceStreamApp({ isViewerMode }) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [mirrored, setMirrored] = useState(true);
+
+  // ROI Polling State
+  const POLL_INTERVAL = 2000; // 2 seconds
+  const DEFAULT_LIMIT = 30; // Get 30 for the chart
+
+  const [roiData, setRoiData] = useState([]);
+  const [totalRoi, setTotalRoi] = useState(0);
+  const [roiLoading, setRoiLoading] = useState(true);
+  const [roiError, setRoiError] = useState(null);
+
+  const fetchROI = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/roi?limit=${DEFAULT_LIMIT}&offset=0`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setRoiData(data.results || []);
+      setTotalRoi(data.total || 0);
+      setRoiError(null);
+    } catch (err) {
+      setRoiError(err.message);
+    } finally {
+      setRoiLoading(false);
+    }
+  }, []);
+
+  // Poll on interval
+  useEffect(() => {
+    fetchROI();
+    const interval = setInterval(fetchROI, POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [fetchROI]);
 
   const handleConnectClick = () => {
     if (connectionStatus === 'connected') {
@@ -162,12 +194,15 @@ function FaceStreamApp({ isViewerMode }) {
             <section className="card-surface p-5">
               <VideoDisplay lastFrame={lastFrame} connectionStatus={connectionStatus} isCameraActive={isViewerMode ? isStreamLive : isCameraActive} isViewerMode={isViewerMode} mirrored={!isViewerMode && mirrored} />
             </section>
+            
+            {/* Live Confidence Chart */}
+            {showPanel && <ConfidenceChart data={roiData} />}
           </div>
 
           {/* Right Column: ROI Data */}
           {showPanel && (
             <aside className="card-surface p-5 lg:sticky lg:top-[72px] lg:self-start lg:max-h-[calc(100vh-92px)] lg:overflow-y-auto">
-              <ROIPanel />
+              <ROIPanel roiData={roiData} total={totalRoi} loading={roiLoading} error={roiError} fetchROI={fetchROI} pollInterval={POLL_INTERVAL} />
             </aside>
           )}
         </div>
